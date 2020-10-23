@@ -1,5 +1,5 @@
 [package]
-name = "andesite-rs"
+name = "twilight-andesite"
 version = "0.2.0"
 authors = ["CHamburr <hi@chamburr.xyz>"]
 edition = "2018"
