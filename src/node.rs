@@ -269,11 +269,18 @@ impl Node {
                 .await
                 .map_err(|source| NodeError::ExecutingRequest { source })?;
 
-            let id = res.headers().get("andesite-connection-id").unwrap();
-            id.to_str()
-                .map_err(|source| NodeError::ParsingResponseHeader { source })?
-                .parse::<u64>()
-                .map_err(|source| NodeError::ParsingInt { source })?
+            let header_id = res
+                .headers()
+                .get("andesite-connection-id");
+            if let Some(id) = header_id {
+                let id = id.to_str()
+                    .map_err(|source| NodeError::ParsingResponseHeader { source })?
+                    .parse::<u64>()
+                    .map_err(|source| NodeError::ParsingInt { source })?;
+                id + 1
+            } else {
+                0
+            }
         };
 
         tracing::debug!("starting connection to {}", config.address);
