@@ -64,7 +64,7 @@ pub mod outgoing {
         Seek(Seek),
         /// Set the volume of a player.
         Volume(Volume),
-        /// Set the filter of a plater.
+        /// Set the filter of a player.
         Filters(Filters),
         /// Equalize a player.
         Equalizer(Equalizer),
