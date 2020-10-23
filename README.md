@@ -1,4 +1,4 @@
-# andesite-rs
+# twilight-andesite
 
 A fork of twilight-lavalink to work with natanbc/andesite.
 
