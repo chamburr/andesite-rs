@@ -64,7 +64,6 @@ struct LavalinkRef {
     guilds: DashMap<GuildId, SocketAddr>,
     nodes: DashMap<SocketAddr, Node>,
     players: PlayerManager,
-    resume: Option<Resume>,
     shard_count: u64,
     user_id: UserId,
     waiting: DashMap<GuildId, VoiceStateHalf>,
@@ -95,36 +94,12 @@ impl Lavalink {
     /// runtime, and the client must be re-created. These parameters are
     /// automatically passed to new nodes created via [`add`].
     ///
-    /// See also [`new_with_resume`], which allows you to specify session resume
-    /// capability.
-    ///
     /// [`add`]: #method.add
-    /// [`new_with_resume`]: #method.new_with_resume
     pub fn new(user_id: UserId, shard_count: u64) -> Self {
-        Self::_new_with_resume(user_id, shard_count, None)
-    }
-
-    /// Like [`new`], but allows you to specify resume capability (if any).
-    ///
-    /// Provide `None` for the `resume` parameter to disable session resume
-    /// capability. See the [`Resume`] documentation for defaults.
-    ///
-    /// [`Resume`]: ../node/struct.Resume.html
-    /// [`new`]: #method.new
-    pub fn new_with_resume(
-        user_id: UserId,
-        shard_count: u64,
-        resume: impl Into<Option<Resume>>,
-    ) -> Self {
-        Self::_new_with_resume(user_id, shard_count, resume.into())
-    }
-
-    fn _new_with_resume(user_id: UserId, shard_count: u64, resume: Option<Resume>) -> Self {
         Self(Arc::new(LavalinkRef {
             guilds: DashMap::new(),
             nodes: DashMap::new(),
             players: PlayerManager::new(),
-            resume,
             shard_count,
             user_id,
             waiting: DashMap::new(),
@@ -272,11 +247,22 @@ impl Lavalink {
         address: SocketAddr,
         authorization: impl Into<String>,
     ) -> Result<(Node, UnboundedReceiver<IncomingEvent>), NodeError> {
+        self.add_with_resume(address, authorization, None).await
+    }
+
+    /// Similar to [`add`], but allows you to specify resume capability.
+    ///
+    /// [`add`]: #method.add
+    pub async fn add_with_resume(
+        &self,
+        address: SocketAddr,
+        authorization: impl Into<String>,
+        resume: impl Into<Option<Resume>>,
+    ) -> Result<(Node, UnboundedReceiver<IncomingEvent>), NodeError> {
         let config = NodeConfig {
             address,
             authorization: authorization.into(),
-            resume: self.0.resume.clone(),
-            shard_count: self.0.shard_count,
+            resume: resume.into(),
             user_id: self.0.user_id,
         };
 
