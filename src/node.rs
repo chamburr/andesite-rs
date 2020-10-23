@@ -52,7 +52,6 @@ use twilight_model::id::UserId;
 /// An error occurred while either initializing a connection or while running
 /// its event loop.
 #[derive(Debug)]
-#[non_exhaustive]
 pub enum NodeError {
     /// Building the HTTP request to initialize a connection failed.
     BuildingConnectionRequest {
