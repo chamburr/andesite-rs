@@ -16,13 +16,7 @@ use dashmap::{
     DashMap,
 };
 use futures_channel::mpsc::TrySendError;
-use std::{
-    fmt::Debug,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
+use std::{fmt::Debug, sync::Arc};
 use twilight_model::id::{ChannelId, GuildId};
 
 /// Retrieve and create players for guilds.
@@ -68,11 +62,11 @@ pub struct Player {
     channel_id: Option<ChannelId>,
     guild_id: GuildId,
     node: Node,
-    paused: AtomicBool,
-    playing: Option<()>,
-    position: i64,
     time: i64,
-    volume: u16,
+    position: i64,
+    paused: bool,
+    volume: i64,
+    filters: FiltersState,
 }
 
 impl Player {
@@ -81,11 +75,11 @@ impl Player {
             channel_id: None,
             guild_id,
             node,
-            paused: AtomicBool::new(false),
-            playing: None,
-            position: 0,
             time: 0,
+            position: 0,
+            paused: false,
             volume: 0,
+            filters: FiltersState::new(),
         }
     }
 
@@ -127,10 +121,6 @@ impl Player {
             event
         );
 
-        if let OutgoingEvent::Pause(ref event) = event {
-            self.paused.store(event.pause, Ordering::Release);
-        }
-
         self.node.send(event)
     }
 
@@ -149,9 +139,14 @@ impl Player {
         self.guild_id
     }
 
-    /// Return a copy of whether the player is paused.
-    pub fn paused(&self) -> bool {
-        self.paused.load(Ordering::Acquire)
+    /// Return a copy of the player's time.
+    pub fn time(&self) -> i64 {
+        self.time
+    }
+
+    /// Return a mutable reference to the player's channel ID.
+    pub(crate) fn time_mut(&mut self) -> &mut i64 {
+        &mut self.time
     }
 
     /// Return a copy of the player's position.
@@ -164,18 +159,33 @@ impl Player {
         &mut self.position
     }
 
-    /// Return a copy of the player's time.
-    pub fn time_ref(&mut self) -> i64 {
-        self.time
+    /// Return a copy of whether the player is paused.
+    pub fn paused(&self) -> bool {
+        self.paused
     }
 
-    /// Return a mutable reference to the player's channel ID.
-    pub(crate) fn time_mut(&mut self) -> &mut i64 {
-        &mut self.time
+    /// Return a mutable copy of whether the player is paused.
+    pub(crate) fn paused_mut(&mut self) -> &mut bool {
+        &mut self.paused
     }
 
     /// Return a copy of the player's volume.
-    pub fn volume_ref(&self) -> u16 {
+    pub fn volume(&self) -> i64 {
         self.volume
+    }
+
+    /// Return a mutable reference to the player's volume.
+    pub(crate) fn volume_mut(&mut self) -> &mut i64 {
+        &mut self.volume
+    }
+
+    /// Return a copy of the player's filters.
+    pub fn filters(&self) -> FiltersState {
+        self.filters.clone()
+    }
+
+    /// Return a mutable copy of the player's filters.
+    pub(crate) fn filters_mut(&mut self) -> &mut FiltersState {
+        &mut self.filters
     }
 }

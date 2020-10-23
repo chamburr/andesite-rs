@@ -84,7 +84,7 @@ pub struct LoadedTracks {
     /// Error that happened while loading track.
     pub cause: Option<Error>,
     /// Severity of the error.
-    pub severity: Option<String>
+    pub severity: Option<String>,
 }
 
 /// Error information.

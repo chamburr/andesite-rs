@@ -37,7 +37,7 @@ pub enum Opcode {
 
 impl Default for Opcode {
     fn default() -> Self {
-        Opcode::Empty
+        Self::Empty
     }
 }
 
@@ -408,8 +408,24 @@ pub mod outgoing {
         }
     }
 
-    impl From<(GuildId, Option<Karaoke>, Option<Timescale>, Option<Tremolo>, Option<Vibrato>)> for Filters {
-        fn from((guild_id, karaoke, timescale, tremolo, vibrato): (GuildId, Option<Karaoke>, Option<Timescale>, Option<Tremolo>, Option<Vibrato>)) -> Self {
+    impl
+        From<(
+            GuildId,
+            Option<Karaoke>,
+            Option<Timescale>,
+            Option<Tremolo>,
+            Option<Vibrato>,
+        )> for Filters
+    {
+        fn from(
+            (guild_id, karaoke, timescale, tremolo, vibrato): (
+                GuildId,
+                Option<Karaoke>,
+                Option<Timescale>,
+                Option<Tremolo>,
+                Option<Vibrato>,
+            ),
+        ) -> Self {
             Self {
                 op: Opcode::Filters,
                 guild_id,
@@ -458,7 +474,7 @@ pub mod outgoing {
                 mono_level,
                 filter_band,
                 filter_width,
-                enabled: false
+                enabled: false,
             }
         }
     }
@@ -491,7 +507,7 @@ pub mod outgoing {
                 speed,
                 pitch,
                 rate,
-                enabled: false
+                enabled: false,
             }
         }
     }
@@ -647,8 +663,8 @@ pub mod outgoing {
 pub mod incoming {
     //! Events that Lavalink sends to clients.
 
+    use super::outgoing::{Equalizer, Karaoke, Timescale, Tremolo, Vibrato};
     use super::Opcode;
-    use super::outgoing::{Karaoke, Timescale, Tremolo, Vibrato, Equalizer};
     use crate::http::Error;
     use serde::{Deserialize, Serialize};
     use twilight_model::id::GuildId;
@@ -707,10 +723,13 @@ pub mod incoming {
         pub filters: FiltersState,
         /// Mixer, always None.
         #[serde(skip)]
-        pub mixer: Option<String>,
+        pub mixer: Option<()>,
         /// Mixer enabled, always None.
         #[serde(skip)]
-        pub mixer_enabled: Option<String>,
+        pub mixer_enabled: Option<()>,
+        /// Frame loss and success, always None.
+        #[serde(skip)]
+        pub frame: Option<()>,
     }
 
     /// List of filters present.
@@ -728,8 +747,46 @@ pub mod incoming {
         /// The equalizer filter.
         pub equalizer: Equalizer,
         /// The volume filter, always None.
-        #[serde(skip_deserializing)]
-        pub volume: Option<String>,
+        #[serde(skip)]
+        pub volume: Option<()>,
+    }
+
+    impl FiltersState {
+        /// Create a new filters state.
+        pub fn new() -> Self {
+            Self {
+                karaoke: Karaoke {
+                    level: 0.0,
+                    mono_level: 0.0,
+                    filter_band: 0.0,
+                    filter_width: 0.0,
+                    enabled: false,
+                },
+                timescale: Timescale {
+                    speed: 0.0,
+                    pitch: 0.0,
+                    rate: 0.0,
+                    enabled: false,
+                },
+                tremolo: Tremolo {
+                    frequency: 0.0,
+                    depth: 0.0,
+                    enabled: false,
+                },
+                vibrato: Vibrato {
+                    frequency: 0.0,
+                    depth: 0.0,
+                    enabled: false,
+                },
+                equalizer: Equalizer {
+                    op: Default::default(),
+                    guild_id: Default::default(),
+                    bands: vec![],
+                    enabled: false,
+                },
+                volume: None,
+            }
+        }
     }
 
     /// Statistics about a node and its host.
@@ -825,7 +882,7 @@ pub mod incoming {
         pub guild_id: GuildId,
         /// The user ID affected, always None.
         #[serde(skip)]
-        pub user_id: Option<String>,
+        pub user_id: Option<()>,
         /// The base64 track that was affected.
         pub track: String,
     }
@@ -843,7 +900,7 @@ pub mod incoming {
         pub guild_id: GuildId,
         /// The user ID affected, always None.
         #[serde(skip)]
-        pub user_id: Option<String>,
+        pub user_id: Option<()>,
         /// The base64 track that was affected.
         pub track: String,
         /// The reason that the track ended.
@@ -863,7 +920,7 @@ pub mod incoming {
         pub guild_id: GuildId,
         /// The user ID affected, always None.
         #[serde(skip)]
-        pub user_id: Option<String>,
+        pub user_id: Option<()>,
         /// The base64 track that was affected.
         pub track: String,
         /// The error that the track encountered exception.
@@ -885,7 +942,7 @@ pub mod incoming {
         pub guild_id: GuildId,
         /// The user ID affected, always None.
         #[serde(skip)]
-        pub user_id: Option<String>,
+        pub user_id: Option<()>,
         /// The base64 track that was affected.
         pub track: String,
         /// The threshold for track stuck.
@@ -914,11 +971,12 @@ pub mod incoming {
 
 pub use self::{
     incoming::{
-        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames, StatsMemory,
-        TrackEnd, TrackEventType, TrackStart,
+        FiltersState, IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames,
+        StatsMemory, TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck,
+        WebsocketClose,
     },
     outgoing::{
-        Destroy, Equalizer, EqualizerBand, OutgoingEvent, Pause, Play, Seek, SlimVoiceServerUpdate,
-        Stop, VoiceUpdate, Volume,
+        Destroy, Equalizer, EqualizerBand, Filters, Karaoke, OutgoingEvent, Pause, Play, Seek,
+        SlimVoiceServerUpdate, Stop, Timescale, Tremolo, Vibrato, VoiceUpdate, Volume,
     },
 };

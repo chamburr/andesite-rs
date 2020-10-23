@@ -34,12 +34,15 @@ use futures_util::{
     sink::SinkExt,
     stream::StreamExt,
 };
-use http::{header::HeaderName, Error as HttpError, Request, Response, StatusCode};
+use http::{header::ToStrError, Error as HttpError, Request, Response, StatusCode};
+use reqwest::{Client, Error as ReqwestError};
 use serde_json::Error as JsonError;
 use std::{
+    convert::TryInto,
     error::Error,
     fmt::{Display, Formatter, Result as FmtResult},
     net::SocketAddr,
+    num::ParseIntError,
     sync::Arc,
     time::Duration,
 };
@@ -55,6 +58,21 @@ pub enum NodeError {
     BuildingConnectionRequest {
         /// The source of the error from the `http` crate.
         source: HttpError,
+    },
+    /// Error executing a HTTP request.
+    ExecutingRequest {
+        /// The source of the error from the `reqwest` crate.
+        source: ReqwestError,
+    },
+    /// Error parsing a HTTP response header.
+    ParsingResponseHeader {
+        /// The source of the error from the `http` crate.
+        source: ToStrError,
+    },
+    /// Error parsing a string to an integer.
+    ParsingInt {
+        /// The source of the error from `std`.
+        source: ParseIntError,
     },
     /// Connecting to the Lavalink server failed after several backoff attempts.
     Connecting {
@@ -83,7 +101,10 @@ impl Display for NodeError {
             Self::BuildingConnectionRequest { .. } => {
                 f.write_str("failed to build connection request")
             }
-            Self::Connecting { .. } => f.write_str("Failed to connect to the node"),
+            Self::ExecutingRequest { .. } => f.write_str("failed to execute http request"),
+            Self::ParsingResponseHeader { .. } => f.write_str("failed to parse response header"),
+            Self::ParsingInt { .. } => f.write_str("failed to parse string to int"),
+            Self::Connecting { .. } => f.write_str("failed to connect to the node"),
             Self::SerializingMessage { .. } => {
                 f.write_str("failed to serialize outgoing message as json")
             }
@@ -100,6 +121,9 @@ impl Error for NodeError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::BuildingConnectionRequest { source } => Some(source),
+            Self::ExecutingRequest { source } => Some(source),
+            Self::ParsingResponseHeader { source } => Some(source),
+            Self::ParsingInt { source } => Some(source),
             Self::Connecting { source } => Some(source),
             Self::SerializingMessage { source, .. } => Some(source),
             Self::Unauthorized { .. } => None,
@@ -111,8 +135,9 @@ impl Error for NodeError {
 ///
 /// [`Node`]: struct.Node.html
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
 pub struct NodeConfig {
+    /// The user ID of the bot.
+    pub user_id: UserId,
     /// The address of the node.
     pub address: SocketAddr,
     /// The password to use when authenticating.
@@ -121,34 +146,35 @@ pub struct NodeConfig {
     ///
     /// Set this to `None` to disable resume capability.
     pub resume: Option<Resume>,
-    /// The number of shards in use by the bot.
-    pub shard_count: u64,
-    /// The user ID of the bot.
-    pub user_id: UserId,
 }
 
 /// Configuration for a session which can be resumed.
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
 pub struct Resume {
     /// The number of seconds that the Lavalink server will allow the session to
     /// be resumed for after a disconnect.
     ///
     /// The default is 60.
     pub timeout: u64,
+    /// The connection id to resume as. Set to None to disable initial resume.
+    pub connection_id: Option<u64>,
 }
 
 impl Resume {
     /// Configure resume capability, providing the number of seconds that the
     /// Lavalink server should queue events for when the connection is resumed.
     pub fn new(seconds: u64) -> Self {
-        Self { timeout: seconds }
+        Self::new_with_id(seconds, None)
     }
-}
 
-impl Default for Resume {
-    fn default() -> Self {
-        Self { timeout: 60 }
+    /// Similar to [`new`], but allows you to specify connection id.
+    ///
+    /// [`new`]: #method.new
+    pub fn new_with_id(seconds: u64, id: Option<u64>) -> Self {
+        Self {
+            timeout: seconds,
+            connection_id: id,
+        }
     }
 }
 
@@ -163,33 +189,15 @@ impl NodeConfig {
     /// [`Node::connect`]: struct.Node.html#method.connect
     pub fn new(
         user_id: UserId,
-        shard_count: u64,
         address: impl Into<SocketAddr>,
         authorization: impl Into<String>,
         resume: impl Into<Option<Resume>>,
     ) -> Self {
-        Self::_new(
-            user_id,
-            shard_count,
-            address.into(),
-            authorization.into(),
-            resume.into(),
-        )
-    }
-
-    fn _new(
-        user_id: UserId,
-        shard_count: u64,
-        address: SocketAddr,
-        authorization: String,
-        resume: Option<Resume>,
-    ) -> Self {
         Self {
-            address,
-            authorization,
-            resume,
-            shard_count,
             user_id,
+            address: address.into(),
+            authorization: authorization.into(),
+            resume: resume.into(),
         }
     }
 }
@@ -200,6 +208,7 @@ struct NodeRef {
     lavalink_tx: UnboundedSender<OutgoingEvent>,
     players: PlayerManager,
     stats: BiLock<Stats>,
+    connection_id: u64,
 }
 
 /// A connection to a single Lavalink server. It receives events and forwards
@@ -243,6 +252,30 @@ impl Node {
             op: Opcode::Stats,
             uptime: 0,
         });
+
+        let connection_id = {
+            let mut req = http::Request::get(format!("http://{}", config.address));
+            req = req.header("connection", "upgrade");
+            req = req.header("upgrade", "websocket");
+            req = req.header("user-id", config.user_id.to_string());
+
+            let req = req
+                .body("")
+                .map_err(|source| NodeError::BuildingConnectionRequest { source })?
+                .try_into()
+                .map_err(|source| NodeError::ExecutingRequest { source })?;
+            let res = Client::new()
+                .execute(req)
+                .await
+                .map_err(|source| NodeError::ExecutingRequest { source })?;
+
+            let id = res.headers().get("andesite-connection-id").unwrap();
+            id.to_str()
+                .map_err(|source| NodeError::ParsingResponseHeader { source })?
+                .parse::<u64>()
+                .map_err(|source| NodeError::ParsingInt { source })?
+        };
+
         tracing::debug!("starting connection to {}", config.address);
         let (conn_loop, lavalink_tx, lavalink_rx) =
             Connection::connect(config.clone(), players.clone(), bilock_right).await?;
@@ -256,6 +289,7 @@ impl Node {
                 lavalink_tx,
                 players,
                 stats: bilock_left,
+                connection_id,
             })),
             lavalink_rx,
         ))
@@ -290,6 +324,11 @@ impl Node {
     /// Retrieve a copy of the node's stats.
     pub async fn stats(&self) -> Stats {
         (*self.0.stats.lock().await).clone()
+    }
+
+    /// Retrieve the connection id of the node.
+    pub fn connection_id(&self) -> u64 {
+        self.0.connection_id
     }
 
     /// Retrieve the calculated penalty score of the node.
@@ -466,8 +505,11 @@ impl Connection {
             }
         };
 
-        *player.value_mut().position_mut() = update.state.position;
         *player.value_mut().time_mut() = update.state.time;
+        *player.value_mut().position_mut() = update.state.position;
+        *player.value_mut().paused_mut() = update.state.paused;
+        *player.value_mut().volume_mut() = update.state.volume;
+        *player.value_mut().filters_mut() = update.state.filters.clone();
 
         Ok(())
     }
@@ -482,11 +524,12 @@ impl Connection {
 fn connect_request(state: &NodeConfig) -> Result<Request<()>, NodeError> {
     let mut builder = Request::get(format!("ws://{}", state.address));
     builder = builder.header("Authorization", &state.authorization);
-    builder = builder.header("Num-Shards", state.shard_count);
     builder = builder.header("User-Id", state.user_id.0);
 
-    if state.resume.is_some() {
-        builder = builder.header("Resume-Key", state.address.to_string());
+    if let Some(resume) = state.resume.as_ref() {
+        if let Some(connection_id) = resume.connection_id {
+            builder = builder.header("Andesite-Resume-Id", connection_id.to_string());
+        }
     }
 
     builder
@@ -495,29 +538,16 @@ fn connect_request(state: &NodeConfig) -> Result<Request<()>, NodeError> {
 }
 
 async fn reconnect(config: &NodeConfig) -> Result<WebSocketStream<ConnectStream>, NodeError> {
-    let (mut stream, res) = backoff(config).await?;
-
-    let headers = res.headers();
+    let (mut stream, _) = backoff(config).await?;
 
     if let Some(resume) = config.resume.as_ref() {
-        let header = HeaderName::from_static("session-resumed");
+        let payload = serde_json::json!({
+            "op": "event-buffer",
+            "timeout": resume.timeout * 1000,
+        });
+        let msg = Message::Text(serde_json::to_string(&payload).unwrap());
 
-        if let Some(value) = headers.get(header) {
-            if value.as_bytes() == b"false" {
-                tracing::debug!("session to node {} didn't resume", config.address);
-
-                let payload = serde_json::json!({
-                    "op": "configureResuming",
-                    "key": config.address,
-                    "timeout": resume.timeout,
-                });
-                let msg = Message::Text(serde_json::to_string(&payload).unwrap());
-
-                stream.send(msg).await.unwrap();
-            } else {
-                tracing::debug!("session to {} resumed", config.address);
-            }
-        }
+        stream.send(msg).await.unwrap();
     }
 
     Ok(stream)
@@ -551,7 +581,7 @@ async fn backoff(
                 }
 
                 tracing::debug!(
-                    "waiting {} sceonds before attempting to connect to node {} again",
+                    "waiting {} seconds before attempting to connect to node {} again",
                     seconds,
                     config.address,
                 );

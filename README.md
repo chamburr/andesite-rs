@@ -2,9 +2,9 @@
 
 A fork of twilight-lavalink to work with natanbc/andesite.
 
-This is currently a work-in-progress.
+This project is a work-in-progress, and some functionalities may be missing.
 
-For support, message CHamburr#2591 on Discord.
+For support, please message CHamburr#2591 on Discord.
 
 ## Related Resources
 
