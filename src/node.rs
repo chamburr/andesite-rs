@@ -268,11 +268,10 @@ impl Node {
                 .await
                 .map_err(|source| NodeError::ExecutingRequest { source })?;
 
-            let header_id = res
-                .headers()
-                .get("andesite-connection-id");
+            let header_id = res.headers().get("andesite-connection-id");
             if let Some(id) = header_id {
-                let id = id.to_str()
+                let id = id
+                    .to_str()
                     .map_err(|source| NodeError::ParsingResponseHeader { source })?
                     .parse::<u64>()
                     .map_err(|source| NodeError::ParsingInt { source })?;
