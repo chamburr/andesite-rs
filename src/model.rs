@@ -215,20 +215,6 @@ pub mod outgoing {
         }
     }
 
-    impl<T: Into<String>, S: Into<Option<u64>>> From<(GuildId, T, S)> for Play {
-        fn from((guild_id, track, start_time): (GuildId, T, S)) -> Self {
-            Self::from((guild_id, track, start_time, None, true))
-        }
-    }
-
-    impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>> From<(GuildId, T, S, E)>
-        for Play
-    {
-        fn from((guild_id, track, start_time, end_time): (GuildId, T, S, E)) -> Self {
-            Self::from((guild_id, track, start_time, end_time, true))
-        }
-    }
-
     impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>> From<(GuildId, T, S, E, bool)>
         for Play
     {

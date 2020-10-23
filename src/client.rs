@@ -271,11 +271,20 @@ impl Lavalink {
         Ok((node, rx))
     }
 
+    /// Get a node with the socket address.
+    pub fn get(&self, address: SocketAddr) -> Option<Node> {
+        if let Some(node) = self.0.nodes.get(&address) {
+            Some(node.clone())
+        } else {
+            None
+        }
+    }
+
     /// Remove a node from the list of nodes being managed by the Lavalink
     /// client.
     ///
     /// The node is returned if it existed.
-    pub async fn remove(&self, address: SocketAddr) -> Option<(SocketAddr, Node)> {
+    pub fn remove(&self, address: SocketAddr) -> Option<(SocketAddr, Node)> {
         self.0.nodes.remove(&address)
     }
 
