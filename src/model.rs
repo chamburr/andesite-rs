@@ -23,8 +23,6 @@ pub enum Opcode {
     Volume,
     /// Set the filter of a player.
     Filters,
-    /// Equalize a player.
-    Equalizer,
     /// Destroy a player from a node.
     Destroy,
     /// An update about a player's current track.
@@ -66,8 +64,6 @@ pub mod outgoing {
         Volume(Volume),
         /// Set the filter of a player.
         Filters(Filters),
-        /// Equalize a player.
-        Equalizer(Equalizer),
         /// Destroy a player for a guild.
         Destroy(Destroy),
     }
@@ -111,12 +107,6 @@ pub mod outgoing {
     impl From<Filters> for OutgoingEvent {
         fn from(event: Filters) -> OutgoingEvent {
             Self::Filters(event)
-        }
-    }
-
-    impl From<Equalizer> for OutgoingEvent {
-        fn from(event: Equalizer) -> OutgoingEvent {
-            Self::Equalizer(event)
         }
     }
 
@@ -393,6 +383,9 @@ pub mod outgoing {
         /// The vibrato filter.
         #[serde(skip_serializing_if = "Option::is_none")]
         pub vibrato: Option<Vibrato>,
+        /// The equalizer filter.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub equalizer: Option<Equalizer>,
     }
 
     impl Filters {
@@ -403,8 +396,9 @@ pub mod outgoing {
             timescale: Option<Timescale>,
             tremolo: Option<Tremolo>,
             vibrato: Option<Vibrato>,
+            equalizer: Option<Equalizer>,
         ) -> Self {
-            Self::from((guild_id, karaoke, timescale, tremolo, vibrato))
+            Self::from((guild_id, karaoke, timescale, tremolo, vibrato, equalizer))
         }
     }
 
@@ -415,15 +409,17 @@ pub mod outgoing {
             Option<Timescale>,
             Option<Tremolo>,
             Option<Vibrato>,
+            Option<Equalizer>,
         )> for Filters
     {
         fn from(
-            (guild_id, karaoke, timescale, tremolo, vibrato): (
+            (guild_id, karaoke, timescale, tremolo, vibrato, equalizer): (
                 GuildId,
                 Option<Karaoke>,
                 Option<Timescale>,
                 Option<Tremolo>,
                 Option<Vibrato>,
+                Option<Equalizer>,
             ),
         ) -> Self {
             Self {
@@ -433,6 +429,7 @@ pub mod outgoing {
                 timescale,
                 tremolo,
                 vibrato,
+                equalizer,
             }
         }
     }
@@ -576,12 +573,6 @@ pub mod outgoing {
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Equalizer {
-        /// The opcode of the event.
-        #[serde(skip_deserializing)]
-        pub op: Opcode,
-        /// The guild ID of the player.
-        #[serde(skip_deserializing)]
-        pub guild_id: GuildId,
         /// The bands to use as part of the equalizer.
         pub bands: Vec<EqualizerBand>,
         /// Whether is enabled, skipped when serializing.
@@ -590,17 +581,15 @@ pub mod outgoing {
     }
 
     impl Equalizer {
-        /// Create a new equalizer event.
-        pub fn new(guild_id: GuildId, bands: Vec<EqualizerBand>) -> Self {
-            Self::from((guild_id, bands))
+        /// Create a new equalizer filter
+        pub fn new(bands: Vec<EqualizerBand>) -> Self {
+            Self::from(bands)
         }
     }
 
-    impl From<(GuildId, Vec<EqualizerBand>)> for Equalizer {
-        fn from((guild_id, bands): (GuildId, Vec<EqualizerBand>)) -> Self {
+    impl From<Vec<EqualizerBand>> for Equalizer {
+        fn from(bands: Vec<EqualizerBand>) -> Self {
             Self {
-                op: Opcode::Equalizer,
-                guild_id,
                 bands,
                 enabled: false,
             }
@@ -779,8 +768,6 @@ pub mod incoming {
                     enabled: false,
                 },
                 equalizer: Equalizer {
-                    op: Default::default(),
-                    guild_id: Default::default(),
                     bands: vec![],
                     enabled: false,
                 },
