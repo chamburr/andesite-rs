@@ -150,10 +150,8 @@ pub struct NodeConfig {
 /// Configuration for a session which can be resumed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Resume {
-    /// The number of seconds that the Lavalink server will allow the session to
-    /// be resumed for after a disconnect.
-    ///
-    /// The default is 60.
+    /// The number of milliseconds that the Lavalink server will allow the
+    /// session to be resumed for after a disconnect.
     pub timeout: u64,
     /// The connection id to resume as. Set to None to disable initial resume.
     pub connection_id: Option<u64>,
@@ -162,16 +160,16 @@ pub struct Resume {
 impl Resume {
     /// Configure resume capability, providing the number of seconds that the
     /// Lavalink server should queue events for when the connection is resumed.
-    pub fn new(seconds: u64) -> Self {
-        Self::new_with_id(seconds, None)
+    pub fn new(timeout: u64) -> Self {
+        Self::new_with_id(timeout, None)
     }
 
     /// Similar to [`new`], but allows you to specify connection id.
     ///
     /// [`new`]: #method.new
-    pub fn new_with_id(seconds: u64, id: impl Into<Option<u64>>) -> Self {
+    pub fn new_with_id(timeout: u64, id: impl Into<Option<u64>>) -> Self {
         Self {
-            timeout: seconds,
+            timeout,
             connection_id: id.into(),
         }
     }
@@ -548,7 +546,7 @@ async fn reconnect(config: &NodeConfig) -> Result<WebSocketStream<ConnectStream>
     if let Some(resume) = config.resume.as_ref() {
         let payload = serde_json::json!({
             "op": "event-buffer",
-            "timeout": resume.timeout * 1000,
+            "timeout": resume.timeout,
         });
         let msg = Message::Text(serde_json::to_string(&payload).unwrap());
 
