@@ -656,6 +656,12 @@ pub mod incoming {
         TrackEnd(TrackEnd),
         /// A track started.
         TrackStart(TrackStart),
+        /// A track encountered exception.
+        TrackException(TrackException),
+        /// A track got stuck.
+        TrackStuck(TrackStuck),
+        /// The websocket got closed.
+        WebsocketClose(WebsocketClose),
     }
 
     impl From<PlayerUpdate> for IncomingEvent {
@@ -922,7 +928,7 @@ pub mod incoming {
         pub threshold_ms: i64,
     }
 
-    /// AThe websocket got closed.
+    /// The websocket got closed.
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct WebsocketClose {
