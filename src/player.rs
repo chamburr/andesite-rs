@@ -17,7 +17,7 @@ use dashmap::{
 };
 use futures_channel::mpsc::TrySendError;
 use std::{fmt::Debug, sync::Arc};
-use twilight_model::id::{ChannelId, GuildId};
+use twilight_model::id::GuildId;
 
 /// Retrieve and create players for guilds.
 ///
@@ -59,11 +59,10 @@ impl PlayerManager {
 /// player for a guild.
 #[derive(Debug)]
 pub struct Player {
-    channel_id: Option<ChannelId>,
     guild_id: GuildId,
     node: Node,
     time: i64,
-    position: i64,
+    position: Option<i64>,
     paused: bool,
     volume: i64,
     filters: FiltersState,
@@ -72,11 +71,10 @@ pub struct Player {
 impl Player {
     pub(crate) fn new(guild_id: GuildId, node: Node) -> Self {
         Self {
-            channel_id: None,
             guild_id,
             node,
             time: 0,
-            position: 0,
+            position: None,
             paused: false,
             volume: 0,
             filters: FiltersState::new(),
@@ -129,11 +127,6 @@ impl Player {
         &self.node
     }
 
-    /// Return a copy of the player's channel ID.
-    pub fn channel_id(&self) -> Option<ChannelId> {
-        self.channel_id.as_ref().copied()
-    }
-
     /// Return an copy of the player's guild ID.
     pub fn guild_id(&self) -> GuildId {
         self.guild_id
@@ -144,18 +137,18 @@ impl Player {
         self.time
     }
 
-    /// Return a mutable reference to the player's channel ID.
+    /// Return a mutable reference to the player's time.
     pub(crate) fn time_mut(&mut self) -> &mut i64 {
         &mut self.time
     }
 
     /// Return a copy of the player's position.
-    pub fn position(&self) -> i64 {
+    pub fn position(&self) -> Option<i64> {
         self.position
     }
 
-    /// Return a mutable reference to the player's channel ID.
-    pub(crate) fn position_mut(&mut self) -> &mut i64 {
+    /// Return a mutable reference to the player's position.
+    pub(crate) fn position_mut(&mut self) -> &mut Option<i64> {
         &mut self.position
     }
 

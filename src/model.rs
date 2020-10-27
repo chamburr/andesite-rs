@@ -695,7 +695,7 @@ pub mod incoming {
         /// The new time of the player.
         pub time: i64,
         /// The new position of the player.
-        pub position: i64,
+        pub position: Option<i64>,
         /// Whether the player is paused.
         pub paused: bool,
         /// Volume of the player.
