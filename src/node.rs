@@ -34,7 +34,10 @@ use futures_util::{
     sink::SinkExt,
     stream::StreamExt,
 };
-use http::{header::ToStrError, Error as HttpError, Request, Response, StatusCode};
+use http::{
+    header::{ToStrError, CONNECTION, UPGRADE},
+    Error as HttpError, Request, Response, StatusCode,
+};
 use reqwest::{Client, Error as ReqwestError};
 use serde_json::Error as JsonError;
 use std::{
@@ -252,9 +255,9 @@ impl Node {
 
         let connection_id = {
             let mut req = http::Request::get(format!("http://{}", config.address));
-            req = req.header("connection", "upgrade");
-            req = req.header("upgrade", "websocket");
-            req = req.header("user-id", config.user_id.to_string());
+            req = req.header(CONNECTION, "Upgrade");
+            req = req.header(UPGRADE, "WebSocket");
+            req = req.header("User-Id", config.user_id.to_string());
 
             let req = req
                 .body("")
@@ -284,18 +287,17 @@ impl Node {
             Connection::connect(config.clone(), players.clone(), bilock_right).await?;
         tracing::debug!("started connection to {}", config.address);
 
-        tokio::spawn(conn_loop.run());
+        let node = Self(Arc::new(NodeRef {
+            config,
+            lavalink_tx,
+            players,
+            stats: bilock_left,
+            connection_id,
+        }));
 
-        Ok((
-            Self(Arc::new(NodeRef {
-                config,
-                lavalink_tx,
-                players,
-                stats: bilock_left,
-                connection_id,
-            })),
-            lavalink_rx,
-        ))
+        tokio::spawn(conn_loop.run(node.clone()));
+
+        Ok((node, lavalink_rx))
     }
 
     /// Retrieve an immutable reference to the node's configuration.
@@ -399,14 +401,14 @@ impl Connection {
         ))
     }
 
-    async fn run(mut self) -> Result<(), NodeError> {
+    async fn run(mut self, node: Node) -> Result<(), NodeError> {
         loop {
             let from_lavalink = self.connection.next();
             let to_lavalink = self.node_from.next();
 
             match future::select(from_lavalink, to_lavalink).await {
                 Either::Left((Some(Ok(incoming)), _)) => {
-                    self.incoming(incoming).await?;
+                    self.incoming(incoming, node.clone()).await?;
                 }
                 Either::Left((_, _)) => {
                     tracing::debug!("connection to {} closed, reconnecting", self.config.address);
@@ -439,7 +441,7 @@ impl Connection {
         Ok(())
     }
 
-    async fn incoming(&mut self, incoming: Message) -> Result<bool, NodeError> {
+    async fn incoming(&mut self, incoming: Message, node: Node) -> Result<bool, NodeError> {
         tracing::debug!(
             "received message from {}: {:?}",
             self.config.address,
@@ -480,7 +482,9 @@ impl Connection {
         };
 
         match event {
-            IncomingEvent::PlayerUpdate(ref update) => self.player_update(update).await?,
+            IncomingEvent::PlayerUpdate(ref update) => {
+                self.player_update(update, node.clone()).await?
+            }
             IncomingEvent::Stats(ref stats) => self.stats(stats).await?,
             _ => {}
         }
@@ -494,18 +498,19 @@ impl Connection {
         Ok(true)
     }
 
-    async fn player_update(&self, update: &PlayerUpdate) -> Result<(), NodeError> {
-        let mut player = match self.players.get_mut(&update.guild_id) {
-            Some(player) => player,
-            None => {
-                tracing::warn!(
-                    "invalid player update for guild {}: {:?}",
-                    update.guild_id,
-                    update,
-                );
-
+    async fn player_update(&self, update: &PlayerUpdate, node: Node) -> Result<(), NodeError> {
+        if let Some(destroyed) = update.state.destroyed {
+            if destroyed {
+                self.players.remove(&update.guild_id);
                 return Ok(());
             }
+        }
+
+        let mut player = match self.players.get_mut(&update.guild_id) {
+            Some(player) => player,
+            None => self
+                .players
+                .get_or_insert(update.guild_id.clone(), node.clone()),
         };
 
         *player.value_mut().time_mut() = update.state.time;

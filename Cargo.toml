@@ -15,6 +15,7 @@ percent-encoding = { default-features = false, optional = true, version = "2" }
 reqwest = { default-features = false, version = "0.10" }
 serde = { default-features = false, features = ["derive", "std"], version = "1" }
 serde_json = { default-features = false, version = "1" }
+serde_with = { default-features = false, features = ["macros"], version = "1.5" }
 tokio = { default-features = false, features = ["net", "rt-core", "time"], version = "0.2" }
 twilight-model = { default-features = false, version = "0.1.3" }
 
