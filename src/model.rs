@@ -7,23 +7,15 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Opcode {
-    /// Default empty op code.
-    Empty,
     /// A combined voice server and voice state update.
     VoiceUpdate,
     /// Play a track.
     Play,
     /// Stop a player.
     Stop,
-    /// Pause a player.
-    Pause,
-    /// Seek a player's active track to a new position.
-    Seek,
-    /// Set the volume of a player.
-    Volume,
-    /// Set the filter of a player.
-    Filters,
-    /// Destroy a player from a node.
+    /// Update a player.
+    Update,
+    /// Destroy a player.
     Destroy,
     /// An update about a player's current track.
     PlayerUpdate,
@@ -33,17 +25,12 @@ pub enum Opcode {
     Stats,
 }
 
-impl Default for Opcode {
-    fn default() -> Self {
-        Self::Empty
-    }
-}
-
 pub mod outgoing {
     //! Events that clients send to Lavalink.
 
     use super::Opcode;
     use serde::{Deserialize, Serialize};
+    use serde_with::skip_serializing_none;
     use twilight_model::{gateway::payload::VoiceServerUpdate, id::GuildId};
 
     /// An outgoing event to send to Lavalink.
@@ -56,14 +43,8 @@ pub mod outgoing {
         Play(Play),
         /// Stop a player.
         Stop(Stop),
-        /// Pause or unpause a player.
-        Pause(Pause),
-        /// Seek a player's active track to a new position.
-        Seek(Seek),
-        /// Set the volume of a player.
-        Volume(Volume),
-        /// Set the filter of a player.
-        Filters(Filters),
+        /// Update a player.
+        Update(Update),
         /// Destroy a player for a guild.
         Destroy(Destroy),
     }
@@ -86,27 +67,9 @@ pub mod outgoing {
         }
     }
 
-    impl From<Pause> for OutgoingEvent {
-        fn from(event: Pause) -> OutgoingEvent {
-            Self::Pause(event)
-        }
-    }
-
-    impl From<Seek> for OutgoingEvent {
-        fn from(event: Seek) -> OutgoingEvent {
-            Self::Seek(event)
-        }
-    }
-
-    impl From<Volume> for OutgoingEvent {
-        fn from(event: Volume) -> OutgoingEvent {
-            Self::Volume(event)
-        }
-    }
-
-    impl From<Filters> for OutgoingEvent {
-        fn from(event: Filters) -> OutgoingEvent {
-            Self::Filters(event)
+    impl From<Update> for OutgoingEvent {
+        fn from(event: Update) -> OutgoingEvent {
+            Self::Update(event)
         }
     }
 
@@ -137,12 +100,6 @@ pub mod outgoing {
             session_id: impl Into<String>,
             event: SlimVoiceServerUpdate,
         ) -> Self {
-            Self::from((guild_id, session_id, event))
-        }
-    }
-
-    impl<T: Into<String>> From<(GuildId, T, SlimVoiceServerUpdate)> for VoiceUpdate {
-        fn from((guild_id, session_id, event): (GuildId, T, SlimVoiceServerUpdate)) -> Self {
             Self {
                 op: Opcode::VoiceUpdate,
                 session_id: session_id.into(),
@@ -197,29 +154,18 @@ pub mod outgoing {
     }
 
     impl Play {
-        /// Create a new play event.
-        pub fn new(
+        /// Create a play event.
+        pub fn new(guild_id: GuildId, track: impl Into<String>) -> Self {
+            Self::new_complex(guild_id, track, None, None, false)
+        }
+
+        /// Create a new complex play event.
+        pub fn new_complex(
             guild_id: GuildId,
             track: impl Into<String>,
             start_time: impl Into<Option<u64>>,
             end_time: impl Into<Option<u64>>,
             no_replace: bool,
-        ) -> Self {
-            Self::from((guild_id, track, start_time, end_time, no_replace))
-        }
-    }
-
-    impl<T: Into<String>> From<(GuildId, T)> for Play {
-        fn from((guild_id, track): (GuildId, T)) -> Self {
-            Self::from((guild_id, track, None, None, true))
-        }
-    }
-
-    impl<T: Into<String>, S: Into<Option<u64>>, E: Into<Option<u64>>> From<(GuildId, T, S, E, bool)>
-        for Play
-    {
-        fn from(
-            (guild_id, track, start_time, end_time, no_replace): (GuildId, T, S, E, bool),
         ) -> Self {
             Self {
                 op: Opcode::Play,
@@ -245,12 +191,6 @@ pub mod outgoing {
     impl Stop {
         /// Create a new stop event.
         pub fn new(guild_id: GuildId) -> Self {
-            Self::from(guild_id)
-        }
-    }
-
-    impl From<GuildId> for Stop {
-        fn from(guild_id: GuildId) -> Self {
             Self {
                 guild_id,
                 op: Opcode::Stop,
@@ -258,159 +198,33 @@ pub mod outgoing {
         }
     }
 
-    /// Pause or unpause a player.
-    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct Pause {
-        /// The opcode of the event.
-        pub op: Opcode,
-        /// The guild ID of the player.
-        pub guild_id: GuildId,
-        /// Whether to pause the player.
-        ///
-        /// Set to `true` to pause or `false` to resume.
-        pub pause: bool,
-    }
-
-    impl Pause {
-        /// Create a new pause event.
-        ///
-        /// Set to `true` to pause the player or `false` to resume it.
-        pub fn new(guild_id: GuildId, pause: bool) -> Self {
-            Self::from((guild_id, pause))
-        }
-    }
-
-    impl From<(GuildId, bool)> for Pause {
-        fn from((guild_id, pause): (GuildId, bool)) -> Self {
-            Self {
-                op: Opcode::Pause,
-                guild_id,
-                pause,
-            }
-        }
-    }
-
-    /// Seek a player's active track to a new position.
-    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct Seek {
-        /// The opcode of the event.
-        pub op: Opcode,
-        /// The guild ID of the player.
-        pub guild_id: GuildId,
-        /// The position in milliseconds to seek to.
-        pub position: i64,
-    }
-
-    impl Seek {
-        /// Create a new seek event.
-        pub fn new(guild_id: GuildId, position: i64) -> Self {
-            Self::from((guild_id, position))
-        }
-    }
-
-    impl From<(GuildId, i64)> for Seek {
-        fn from((guild_id, position): (GuildId, i64)) -> Self {
-            Self {
-                op: Opcode::Seek,
-                guild_id,
-                position,
-            }
-        }
-    }
-
-    /// Set the volume of a player.
-    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct Volume {
-        /// The opcode of the event.
-        pub op: Opcode,
-        /// The guild ID of the player.
-        pub guild_id: GuildId,
-        /// The volume of the player from 0 to 1000. 100 is the default.
-        pub volume: i64,
-    }
-
-    impl Volume {
-        /// Create a new volume event.
-        pub fn new(guild_id: GuildId, volume: i64) -> Self {
-            Self::from((guild_id, volume))
-        }
-    }
-
-    impl From<(GuildId, i64)> for Volume {
-        fn from((guild_id, volume): (GuildId, i64)) -> Self {
-            Self {
-                op: Opcode::Volume,
-                guild_id,
-                volume,
-            }
-        }
-    }
-
     /// Set the filters of a player
+    #[skip_serializing_none]
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Filters {
-        /// The opcode of the event.
-        pub op: Opcode,
-        /// The guild ID of the player.
-        pub guild_id: GuildId,
         /// The karaoke filter.
-        #[serde(skip_serializing_if = "Option::is_none")]
         pub karaoke: Option<Karaoke>,
         /// The timescale filter.
-        #[serde(skip_serializing_if = "Option::is_none")]
         pub timescale: Option<Timescale>,
         /// The tremolo filter.
-        #[serde(skip_serializing_if = "Option::is_none")]
         pub tremolo: Option<Tremolo>,
         /// The vibrato filter.
-        #[serde(skip_serializing_if = "Option::is_none")]
         pub vibrato: Option<Vibrato>,
         /// The equalizer filter.
-        #[serde(skip_serializing_if = "Option::is_none")]
         pub equalizer: Option<Equalizer>,
     }
 
     impl Filters {
-        /// Create a new filters event.
+        /// Create new filters.
         pub fn new(
-            guild_id: GuildId,
             karaoke: Option<Karaoke>,
             timescale: Option<Timescale>,
             tremolo: Option<Tremolo>,
             vibrato: Option<Vibrato>,
             equalizer: Option<Equalizer>,
         ) -> Self {
-            Self::from((guild_id, karaoke, timescale, tremolo, vibrato, equalizer))
-        }
-    }
-
-    impl
-        From<(
-            GuildId,
-            Option<Karaoke>,
-            Option<Timescale>,
-            Option<Tremolo>,
-            Option<Vibrato>,
-            Option<Equalizer>,
-        )> for Filters
-    {
-        fn from(
-            (guild_id, karaoke, timescale, tremolo, vibrato, equalizer): (
-                GuildId,
-                Option<Karaoke>,
-                Option<Timescale>,
-                Option<Tremolo>,
-                Option<Vibrato>,
-                Option<Equalizer>,
-            ),
-        ) -> Self {
             Self {
-                op: Opcode::Filters,
-                guild_id,
                 karaoke,
                 timescale,
                 tremolo,
@@ -440,18 +254,6 @@ pub mod outgoing {
     impl Karaoke {
         /// Create a new karaoke filter.
         pub fn new(level: f64, mono_level: f64, filter_band: f64, filter_width: f64) -> Self {
-            Self::from((level, mono_level, filter_band, filter_width))
-        }
-    }
-
-    impl From<f64> for Karaoke {
-        fn from(level: f64) -> Self {
-            Self::from((level, 1 as f64, 220 as f64, 100 as f64))
-        }
-    }
-
-    impl From<(f64, f64, f64, f64)> for Karaoke {
-        fn from((level, mono_level, filter_band, filter_width): (f64, f64, f64, f64)) -> Self {
             Self {
                 level,
                 mono_level,
@@ -480,12 +282,6 @@ pub mod outgoing {
     impl Timescale {
         /// Create a new timescale filter.
         pub fn new(speed: f64, pitch: f64, rate: f64) -> Self {
-            Self::from((speed, pitch, rate))
-        }
-    }
-
-    impl From<(f64, f64, f64)> for Timescale {
-        fn from((speed, pitch, rate): (f64, f64, f64)) -> Self {
             Self {
                 speed,
                 pitch,
@@ -511,12 +307,6 @@ pub mod outgoing {
     impl Tremolo {
         /// Create a new tremolo filter.
         pub fn new(frequency: f64, depth: f64) -> Self {
-            Self::from((frequency, depth))
-        }
-    }
-
-    impl From<(f64, f64)> for Tremolo {
-        fn from((frequency, depth): (f64, f64)) -> Self {
             Self {
                 frequency,
                 depth,
@@ -541,12 +331,6 @@ pub mod outgoing {
     impl Vibrato {
         /// Create a new timescale filter.
         pub fn new(frequency: f64, depth: f64) -> Self {
-            Self::from((frequency, depth))
-        }
-    }
-
-    impl From<(f64, f64)> for Vibrato {
-        fn from((frequency, depth): (f64, f64)) -> Self {
             Self {
                 frequency,
                 depth,
@@ -569,12 +353,6 @@ pub mod outgoing {
     impl Equalizer {
         /// Create a new equalizer filter
         pub fn new(bands: Vec<EqualizerBand>) -> Self {
-            Self::from(bands)
-        }
-    }
-
-    impl From<Vec<EqualizerBand>> for Equalizer {
-        fn from(bands: Vec<EqualizerBand>) -> Self {
             Self {
                 bands,
                 enabled: false,
@@ -595,13 +373,45 @@ pub mod outgoing {
     impl EqualizerBand {
         /// Create a new equalizer band.
         pub fn new(band: i64, gain: f64) -> Self {
-            Self::from((band, gain))
+            Self { band, gain }
         }
     }
 
-    impl From<(i64, f64)> for EqualizerBand {
-        fn from((band, gain): (i64, f64)) -> Self {
-            Self { band, gain }
+    /// Update a player.
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct Update {
+        /// The opcode of the event.
+        pub op: Opcode,
+        /// The guild ID of the player.
+        pub guild_id: GuildId,
+        /// Whether to pause the player.
+        pub pause: Option<bool>,
+        /// The new position of the player.
+        pub position: Option<i64>,
+        /// The volume of the player from 0 to 1000. 100 is the default.
+        pub volume: Option<i64>,
+        /// The filters of the player.
+        pub filter: Option<Filters>,
+    }
+
+    impl Update {
+        /// Create a new update event.
+        pub fn new(
+            guild_id: GuildId,
+            pause: Option<bool>,
+            position: Option<i64>,
+            volume: Option<i64>,
+            filter: Option<Filters>,
+        ) -> Self {
+            Self {
+                op: Opcode::Update,
+                guild_id,
+                pause,
+                position,
+                volume,
+                filter,
+            }
         }
     }
 
@@ -618,15 +428,6 @@ pub mod outgoing {
     impl Destroy {
         /// Create a new destroy event.
         pub fn new(guild_id: GuildId) -> Self {
-            Self {
-                op: Opcode::Destroy,
-                guild_id,
-            }
-        }
-    }
-
-    impl From<GuildId> for Destroy {
-        fn from(guild_id: GuildId) -> Self {
             Self {
                 op: Opcode::Destroy,
                 guild_id,
@@ -684,6 +485,9 @@ pub mod incoming {
         pub op: Opcode,
         /// The guild ID of the player.
         pub guild_id: GuildId,
+        /// The user ID affected, always None.
+        #[serde(skip)]
+        pub user_id: Option<()>,
         /// The new state of the player.
         pub state: PlayerUpdateState,
     }
@@ -702,6 +506,8 @@ pub mod incoming {
         pub volume: i64,
         /// Filters present.
         pub filters: FiltersState,
+        /// Whether the player is destroyed.
+        pub destroyed: Option<bool>,
         /// Mixer, always None.
         #[serde(skip)]
         pub mixer: Option<()>,
@@ -939,6 +745,9 @@ pub mod incoming {
         pub kind: TrackEventType,
         /// The guild ID of the player.
         pub guild_id: GuildId,
+        /// The user ID affected, always None.
+        #[serde(skip)]
+        pub user_id: Option<()>,
         /// The reason for the close of websocket.
         pub reason: String,
         /// The code for this websocket close.
@@ -955,7 +764,7 @@ pub use self::{
         WebsocketClose,
     },
     outgoing::{
-        Destroy, Equalizer, EqualizerBand, Filters, Karaoke, OutgoingEvent, Pause, Play, Seek,
-        SlimVoiceServerUpdate, Stop, Timescale, Tremolo, Vibrato, VoiceUpdate, Volume,
+        Destroy, Equalizer, EqualizerBand, Filters, Karaoke, OutgoingEvent, Play,
+        SlimVoiceServerUpdate, Stop, Timescale, Tremolo, Update, Vibrato, VoiceUpdate,
     },
 };

@@ -51,6 +51,11 @@ impl PlayerManager {
             .entry(guild_id)
             .or_insert_with(|| Player::new(guild_id, node))
     }
+
+    /// Remove a player by guild ID.
+    pub fn remove(&self, guild_id: &GuildId) -> Option<(GuildId, Player)> {
+        self.players.remove(guild_id)
+    }
 }
 
 /// A player for a guild connected to a node.
@@ -127,7 +132,7 @@ impl Player {
         &self.node
     }
 
-    /// Return an copy of the player's guild ID.
+    /// Return a copy of the player's guild ID.
     pub fn guild_id(&self) -> GuildId {
         self.guild_id
     }
