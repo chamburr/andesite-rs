@@ -358,6 +358,31 @@ impl Node {
 
         stats.playing_players as i32 + cpu as i32 + deficit_frame as i32 + null_frame as i32
     }
+
+    /// Provide a player update event.
+    pub fn provide_player_update(
+        &self, players: &PlayerManager, update: &PlayerUpdate,
+    ) -> Result<(), NodeError> {
+        if let Some(destroyed) = update.state.destroyed {
+            if destroyed {
+                players.remove(&update.guild_id);
+                return Ok(());
+            }
+        }
+
+        let mut player = match players.get_mut(&update.guild_id) {
+            Some(player) => player,
+            None => players.get_or_insert(update.guild_id.clone(), self.clone()),
+        };
+
+        *player.value_mut().time_mut() = update.state.time;
+        *player.value_mut().position_mut() = update.state.position;
+        *player.value_mut().paused_mut() = update.state.paused;
+        *player.value_mut().volume_mut() = update.state.volume;
+        *player.value_mut().filters_mut() = update.state.filters.clone();
+
+        Ok(())
+    }
 }
 
 struct Connection {
@@ -499,27 +524,7 @@ impl Connection {
     }
 
     async fn player_update(&self, update: &PlayerUpdate, node: Node) -> Result<(), NodeError> {
-        if let Some(destroyed) = update.state.destroyed {
-            if destroyed {
-                self.players.remove(&update.guild_id);
-                return Ok(());
-            }
-        }
-
-        let mut player = match self.players.get_mut(&update.guild_id) {
-            Some(player) => player,
-            None => self
-                .players
-                .get_or_insert(update.guild_id.clone(), node.clone()),
-        };
-
-        *player.value_mut().time_mut() = update.state.time;
-        *player.value_mut().position_mut() = update.state.position;
-        *player.value_mut().paused_mut() = update.state.paused;
-        *player.value_mut().volume_mut() = update.state.volume;
-        *player.value_mut().filters_mut() = update.state.filters.clone();
-
-        Ok(())
+        node.provide_player_update(&self.players, update)
     }
 
     async fn stats(&self, stats: &Stats) -> Result<(), NodeError> {
