@@ -213,24 +213,62 @@ pub mod outgoing {
         pub vibrato: Option<Vibrato>,
         /// The equalizer filter.
         pub equalizer: Option<Equalizer>,
+        /// The volume filter, always None.
+        #[serde(skip)]
+        pub volume: Option<()>,
     }
 
     impl Filters {
         /// Create new filters.
         pub fn new(
-            karaoke: Option<Karaoke>,
-            timescale: Option<Timescale>,
-            tremolo: Option<Tremolo>,
-            vibrato: Option<Vibrato>,
-            equalizer: Option<Equalizer>,
+            karaoke: impl Into<Option<Karaoke>>,
+            timescale: impl Into<Option<Timescale>>,
+            tremolo: impl Into<Option<Tremolo>>,
+            vibrato: impl Into<Option<Vibrato>>,
+            equalizer: impl Into<Option<Equalizer>>,
         ) -> Self {
             Self {
-                karaoke,
-                timescale,
-                tremolo,
-                vibrato,
-                equalizer,
+                karaoke: karaoke.into(),
+                timescale: timescale.into(),
+                tremolo: tremolo.into(),
+                vibrato: vibrato.into(),
+                equalizer: equalizer.into(),
+                volume: None,
             }
+        }
+    }
+
+    impl Default for Filters {
+        fn default() -> Self {
+            Self::new(
+                Karaoke {
+                    level: 0.0,
+                    mono_level: 0.0,
+                    filter_band: 0.0,
+                    filter_width: 0.0,
+                    enabled: false,
+                },
+                Timescale {
+                    speed: 0.0,
+                    pitch: 0.0,
+                    rate: 0.0,
+                    enabled: false,
+                },
+                Tremolo {
+                    frequency: 0.0,
+                    depth: 0.0,
+                    enabled: false,
+                },
+                Vibrato {
+                    frequency: 0.0,
+                    depth: 0.0,
+                    enabled: false,
+                },
+                Equalizer {
+                    bands: vec![],
+                    enabled: false,
+                },
+            )
         }
     }
 
@@ -439,7 +477,7 @@ pub mod outgoing {
 pub mod incoming {
     //! Events that Lavalink sends to clients.
 
-    use super::outgoing::{Equalizer, Karaoke, Timescale, Tremolo, Vibrato};
+    use super::outgoing::Filters;
     use super::Opcode;
     use crate::http::Error;
     use serde::{Deserialize, Serialize};
@@ -505,7 +543,7 @@ pub mod incoming {
         /// Volume of the player.
         pub volume: i64,
         /// Filters present.
-        pub filters: FiltersState,
+        pub filters: Filters,
         /// Whether the player is destroyed.
         pub destroyed: Option<bool>,
         /// Mixer, always None.
@@ -517,61 +555,6 @@ pub mod incoming {
         /// Frame loss and success, always None.
         #[serde(skip)]
         pub frame: Option<()>,
-    }
-
-    /// List of filters present.
-    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct FiltersState {
-        /// The karaoke filter.
-        pub karaoke: Karaoke,
-        /// The timescale filter.
-        pub timescale: Timescale,
-        /// The tremolo filter.
-        pub tremolo: Tremolo,
-        /// The vibrato filter.
-        pub vibrato: Vibrato,
-        /// The equalizer filter.
-        pub equalizer: Equalizer,
-        /// The volume filter, always None.
-        #[serde(skip)]
-        pub volume: Option<()>,
-    }
-
-    impl FiltersState {
-        /// Create a new filters state.
-        pub fn new() -> Self {
-            Self {
-                karaoke: Karaoke {
-                    level: 0.0,
-                    mono_level: 0.0,
-                    filter_band: 0.0,
-                    filter_width: 0.0,
-                    enabled: false,
-                },
-                timescale: Timescale {
-                    speed: 0.0,
-                    pitch: 0.0,
-                    rate: 0.0,
-                    enabled: false,
-                },
-                tremolo: Tremolo {
-                    frequency: 0.0,
-                    depth: 0.0,
-                    enabled: false,
-                },
-                vibrato: Vibrato {
-                    frequency: 0.0,
-                    depth: 0.0,
-                    enabled: false,
-                },
-                equalizer: Equalizer {
-                    bands: vec![],
-                    enabled: false,
-                },
-                volume: None,
-            }
-        }
     }
 
     /// Statistics about a node and its host.
@@ -759,7 +742,7 @@ pub mod incoming {
 
 pub use self::{
     incoming::{
-        FiltersState, IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames,
+        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames,
         StatsMemory, TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck,
         WebsocketClose,
     },

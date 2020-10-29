@@ -70,7 +70,7 @@ pub struct Player {
     position: Option<i64>,
     paused: bool,
     volume: i64,
-    filters: FiltersState,
+    filters: Filters,
 }
 
 impl Player {
@@ -82,7 +82,7 @@ impl Player {
             position: None,
             paused: false,
             volume: 0,
-            filters: FiltersState::new(),
+            filters: Filters::default(),
         }
     }
 
@@ -178,12 +178,12 @@ impl Player {
     }
 
     /// Return a copy of the player's filters.
-    pub fn filters(&self) -> FiltersState {
+    pub fn filters(&self) -> Filters {
         self.filters.clone()
     }
 
     /// Return a mutable copy of the player's filters.
-    pub(crate) fn filters_mut(&mut self) -> &mut FiltersState {
+    pub(crate) fn filters_mut(&mut self) -> &mut Filters {
         &mut self.filters
     }
 }
