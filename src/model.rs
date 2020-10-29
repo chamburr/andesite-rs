@@ -437,18 +437,18 @@ pub mod outgoing {
         /// Create a new update event.
         pub fn new(
             guild_id: GuildId,
-            pause: Option<bool>,
-            position: Option<i64>,
-            volume: Option<i64>,
-            filter: Option<Filters>,
+            pause: impl Into<Option<bool>>,
+            position: impl Into<Option<i64>>,
+            volume: impl Into<Option<i64>>,
+            filter: impl Into<Option<Filters>>,
         ) -> Self {
             Self {
                 op: Opcode::Update,
                 guild_id,
-                pause,
-                position,
-                volume,
-                filter,
+                pause: pause.into(),
+                position: position.into(),
+                volume: volume.into(),
+                filter: filter.into(),
             }
         }
     }
