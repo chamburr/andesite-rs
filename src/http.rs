@@ -114,8 +114,8 @@ pub struct Error {
 /// [`LoadedTracks`]: struct.LoadedTracks.html
 pub fn load_track(
     address: SocketAddr,
-    identifier: impl AsRef<str>,
     authorization: impl AsRef<str>,
+    identifier: impl AsRef<str>,
 ) -> Result<Request<&'static [u8]>, HttpError> {
     let identifier =
         percent_encoding::percent_encode(identifier.as_ref().as_bytes(), NON_ALPHANUMERIC);
@@ -128,3 +128,20 @@ pub fn load_track(
 
     req.body(b"")
 }
+
+/// Decode a track based on the base64 encoded track string.
+pub fn decode_track(
+    address: SocketAddr,
+    authorization: impl AsRef<str>,
+    track: impl AsRef<str>,
+) -> Result<Request<&'static [u8]>, HttpError> {
+    let url = format!("http://{}/decodetrack?track={}", address, track.as_ref());
+
+    let mut req = Request::get(url);
+
+    let auth_value = HeaderValue::from_str(authorization.as_ref())?;
+    req = req.header(AUTHORIZATION, auth_value);
+
+    req.body(b"")
+}
+
