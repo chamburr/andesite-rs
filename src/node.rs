@@ -361,7 +361,9 @@ impl Node {
 
     /// Provide a player update event.
     pub fn provide_player_update(
-        &self, players: &PlayerManager, update: &PlayerUpdate,
+        &self,
+        players: &PlayerManager,
+        update: &PlayerUpdate,
     ) -> Result<(), NodeError> {
         if let Some(destroyed) = update.state.destroyed {
             if destroyed {
