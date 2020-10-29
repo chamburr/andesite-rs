@@ -246,8 +246,8 @@ pub mod outgoing {
         pub filter_band: f64,
         /// The filter width.
         pub filter_width: f64,
-        /// Whether is enabled, skipped when serializing.
-        #[serde(skip_serializing)]
+        /// Whether is enabled, always false.
+        #[serde(skip)]
         pub enabled: bool,
     }
 
@@ -274,8 +274,8 @@ pub mod outgoing {
         pub pitch: f64,
         /// Rate to play at.
         pub rate: f64,
-        /// Whether is enabled, skipped when serializing.
-        #[serde(skip_serializing)]
+        /// Whether is enabled, always false.
+        #[serde(skip)]
         pub enabled: bool,
     }
 
@@ -299,8 +299,8 @@ pub mod outgoing {
         pub frequency: f64,
         /// The filter depth.
         pub depth: f64,
-        /// Whether is enabled, skipped when serializing.
-        #[serde(skip_serializing)]
+        /// Whether is enabled, always false.
+        #[serde(skip)]
         pub enabled: bool,
     }
 
@@ -323,8 +323,8 @@ pub mod outgoing {
         pub frequency: f64,
         /// The filter depth.
         pub depth: f64,
-        /// Whether is enabled, skipped when serializing.
-        #[serde(skip_serializing)]
+        /// Whether is enabled, always false.
+        #[serde(skip)]
         pub enabled: bool,
     }
 
@@ -345,8 +345,8 @@ pub mod outgoing {
     pub struct Equalizer {
         /// The bands to use as part of the equalizer.
         pub bands: Vec<EqualizerBand>,
-        /// Whether is enabled, skipped when serializing.
-        #[serde(skip_serializing)]
+        /// Whether is enabled, always false.
+        #[serde(skip)]
         pub enabled: bool,
     }
 
