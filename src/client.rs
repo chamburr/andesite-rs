@@ -1,7 +1,7 @@
 //! Client to manage nodes and players.
 
 use crate::{
-    model::{IncomingEvent, OutgoingEvent, VoiceUpdate},
+    model::{IncomingEvent, OutgoingEvent},
     node::{Node, NodeConfig, NodeError, Resume},
     player::{Player, PlayerManager},
 };
@@ -13,13 +13,7 @@ use std::{
     net::SocketAddr,
     sync::Arc,
 };
-use twilight_model::{
-    gateway::{
-        event::Event,
-        payload::{VoiceServerUpdate, VoiceStateUpdate},
-    },
-    id::{GuildId, UserId},
-};
+use twilight_model::id::{GuildId, UserId};
 
 /// An error that can occur while interacting with the client.
 #[derive(Clone, Debug, PartialEq)]
@@ -52,20 +46,12 @@ impl Error for ClientError {
     }
 }
 
-#[derive(Debug)]
-enum VoiceStateHalf {
-    Server(VoiceServerUpdate),
-    State(Box<VoiceStateUpdate>),
-}
-
 #[derive(Debug, Default)]
 struct LavalinkRef {
     guilds: DashMap<GuildId, SocketAddr>,
     nodes: DashMap<SocketAddr, Node>,
     players: PlayerManager,
-    shard_count: u64,
     user_id: UserId,
-    waiting: DashMap<GuildId, VoiceStateHalf>,
 }
 
 /// The lavalink client that manages nodes, players, and processes events from
@@ -94,147 +80,13 @@ impl Lavalink {
     /// automatically passed to new nodes created via [`add`].
     ///
     /// [`add`]: #method.add
-    pub fn new(user_id: UserId, shard_count: u64) -> Self {
+    pub fn new(user_id: UserId) -> Self {
         Self(Arc::new(LavalinkRef {
             guilds: DashMap::new(),
             nodes: DashMap::new(),
             players: PlayerManager::new(),
-            shard_count,
             user_id,
-            waiting: DashMap::new(),
         }))
-    }
-
-    /// Process an event into the Lavalink client.
-    ///
-    /// **Note**: calling this method in your event loop is required. See the
-    /// [crate documentation] for an example.
-    ///
-    /// This requires the `VoiceServerUpdate` and `VoiceStateUpdate` events that
-    /// you receive from Discord over the gateway to send voice updates to
-    /// nodes. For simplicity in some applications' event loops, any event can
-    /// be provided, but they will just be ignored.
-    ///
-    /// The Ready event can optionally be provided to do some cleaning of
-    /// stalled voice states that never received their voice server update half
-    /// or vice versa. It is recommended that you process Ready events.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ClientError::NodesUnconfigured`] if no nodes have been added
-    /// to the client when attempting to retrieve a guild's player.
-    ///
-    /// [`ClientError::NodesUnconfigured`]: enum.ClientError.html#variant.NodesUnconfigured
-    /// [crate documentation]: ../index.html#examples
-    pub async fn process(&self, event: &Event) -> Result<(), ClientError> {
-        tracing::trace!("processing event: {:?}", event);
-
-        let (guild_id, half) = match event {
-            Event::Ready(e) => {
-                let shard_id = e.shard.map_or(0, |[id, _]| id);
-
-                self.clear_shard_states(shard_id);
-
-                return Ok(());
-            }
-            Event::VoiceServerUpdate(e) => (e.guild_id, VoiceStateHalf::Server(e.clone())),
-            Event::VoiceStateUpdate(e) => {
-                if e.0.user_id != self.0.user_id {
-                    tracing::trace!("got voice state update from another user");
-
-                    return Ok(());
-                }
-
-                (e.0.guild_id, VoiceStateHalf::State(e.clone()))
-            }
-            _ => return Ok(()),
-        };
-
-        tracing::debug!(
-            "got voice server/state update for {:?}: {:?}",
-            guild_id,
-            half
-        );
-
-        let guild_id = match guild_id {
-            Some(guild_id) => guild_id,
-            None => {
-                tracing::trace!("event has no guild ID: {:?}", event);
-
-                return Ok(());
-            }
-        };
-
-        let update = {
-            let existing_half = match self.0.waiting.get(&guild_id) {
-                Some(existing_half) => existing_half,
-                None => {
-                    tracing::debug!(
-                        "guild {} is now waiting for other half; got: {:?}",
-                        guild_id,
-                        half
-                    );
-                    self.0.waiting.insert(guild_id, half);
-
-                    return Ok(());
-                }
-            };
-            tracing::debug!(
-                "got both halves for {}: {:?}; {:?}",
-                guild_id,
-                half,
-                existing_half.value()
-            );
-
-            match (existing_half.value(), half) {
-                (VoiceStateHalf::Server(_), VoiceStateHalf::Server(server)) => {
-                    // We got the same half twice... weird, but let's just replace
-                    // the existing one.
-                    tracing::debug!(
-                        "got the same server half twice for guild {}: {:?}",
-                        guild_id,
-                        server
-                    );
-                    self.0
-                        .waiting
-                        .insert(guild_id, VoiceStateHalf::Server(server));
-
-                    return Ok(());
-                }
-                (VoiceStateHalf::Server(ref server), VoiceStateHalf::State(ref state)) => {
-                    VoiceUpdate::new(guild_id, &state.0.session_id, From::from(server.clone()))
-                }
-                (VoiceStateHalf::State(_), VoiceStateHalf::State(state)) => {
-                    // Just like above, we got the same half twice...
-                    tracing::debug!(
-                        "got the same state half twice for guild {}: {:?}",
-                        guild_id,
-                        state
-                    );
-                    self.0
-                        .waiting
-                        .insert(guild_id, VoiceStateHalf::State(state));
-
-                    return Ok(());
-                }
-                (VoiceStateHalf::State(ref state), VoiceStateHalf::Server(ref server)) => {
-                    VoiceUpdate::new(guild_id, &state.0.session_id, From::from(server.clone()))
-                }
-            }
-        };
-
-        tracing::debug!("removing guild {} from waiting list", guild_id);
-        self.0.waiting.remove(&guild_id);
-
-        tracing::debug!("getting player for guild {}", guild_id);
-        let player = self.player(guild_id).await?;
-        tracing::debug!("sending voice update for guild {}: {:?}", guild_id, update);
-        player
-            .send(update)
-            .map_err(|source| ClientError::SendingVoiceUpdate { source })?;
-        tracing::debug!("sent voice update for guild {}", guild_id);
-
-        Ok(())
     }
 
     /// Add a new node to be managed by the Lavalink client.
@@ -343,25 +195,5 @@ impl Lavalink {
         let node = self.best().await?;
 
         Ok(self.players().get_or_insert(guild_id, node).downgrade())
-    }
-
-    /// Clear out the map of guild states/updates for a shard that are waiting
-    /// for their other half.
-    ///
-    /// We can do this by iterating over the map and removing the ones that we
-    /// can calculate came from a shard.
-    ///
-    /// This map should be small or empty, and if it isn't, then it needs to be
-    /// cleared out anyway.
-    pub fn clear_shard_states(&self, shard_id: u64) {
-        let shard_count = self.0.shard_count;
-
-        for r in self.0.waiting.iter() {
-            let guild_id = r.key();
-
-            if (guild_id.0 >> 22) % shard_count == shard_id {
-                self.0.waiting.remove(guild_id);
-            }
-        }
     }
 }
