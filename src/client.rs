@@ -353,7 +353,7 @@ impl Lavalink {
     ///
     /// This map should be small or empty, and if it isn't, then it needs to be
     /// cleared out anyway.
-    fn clear_shard_states(&self, shard_id: u64) {
+    pub fn clear_shard_states(&self, shard_id: u64) {
         let shard_count = self.0.shard_count;
 
         for r in self.0.waiting.iter() {
