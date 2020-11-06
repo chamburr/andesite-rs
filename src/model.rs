@@ -742,9 +742,8 @@ pub mod incoming {
 
 pub use self::{
     incoming::{
-        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames,
-        StatsMemory, TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck,
-        WebsocketClose,
+        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames, StatsMemory,
+        TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck, WebsocketClose,
     },
     outgoing::{
         Destroy, Equalizer, EqualizerBand, Filters, Karaoke, OutgoingEvent, Play,

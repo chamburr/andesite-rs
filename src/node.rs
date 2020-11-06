@@ -314,8 +314,8 @@ impl Node {
     ///
     /// Note that sending player events through the node's sender won't update
     /// player states, such as whether it's paused.
-    pub fn send(&self, event: OutgoingEvent) -> Result<(), TrySendError<OutgoingEvent>> {
-        self.sender().unbounded_send(event)
+    pub fn send(&self, event: impl Into<OutgoingEvent>) -> Result<(), TrySendError<OutgoingEvent>> {
+        self.sender().unbounded_send(event.into())
     }
 
     /// Retrieve a unique sender to send events to the Lavalink server.
