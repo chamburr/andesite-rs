@@ -716,7 +716,7 @@ pub mod incoming {
         #[serde(skip)]
         pub user_id: Option<()>,
         /// The reason for the close of websocket.
-        pub reason: String,
+        pub reason: Option<String>,
         /// The code for this websocket close.
         pub code: i64,
         /// Whether it is closed by remote.
