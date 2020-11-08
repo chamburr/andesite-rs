@@ -382,7 +382,7 @@ pub mod outgoing {
     #[serde(rename_all = "camelCase")]
     pub struct Equalizer {
         /// The bands to use as part of the equalizer.
-        pub bands: Vec<EqualizerBand>,
+        pub bands: Vec<f64>,
         /// Whether is enabled, always false.
         #[serde(skip)]
         pub enabled: bool,
@@ -390,28 +390,11 @@ pub mod outgoing {
 
     impl Equalizer {
         /// Create a new equalizer filter
-        pub fn new(bands: Vec<EqualizerBand>) -> Self {
+        pub fn new(bands: Vec<f64>) -> Self {
             Self {
                 bands,
                 enabled: false,
             }
-        }
-    }
-
-    /// A band of the equalizer event.
-    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct EqualizerBand {
-        /// The band.
-        pub band: i64,
-        /// The gain.
-        pub gain: f64,
-    }
-
-    impl EqualizerBand {
-        /// Create a new equalizer band.
-        pub fn new(band: i64, gain: f64) -> Self {
-            Self { band, gain }
         }
     }
 
@@ -746,7 +729,7 @@ pub use self::{
         TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck, WebsocketClose,
     },
     outgoing::{
-        Destroy, Equalizer, EqualizerBand, Filters, Karaoke, OutgoingEvent, Play,
+        Destroy, Equalizer, Filters, Karaoke, OutgoingEvent, Play,
         SlimVoiceServerUpdate, Stop, Timescale, Tremolo, Update, Vibrato, VoiceUpdate,
     },
 };
