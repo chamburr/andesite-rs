@@ -399,6 +399,7 @@ pub mod outgoing {
     }
 
     /// Update a player.
+    #[skip_serializing_none]
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Update {
