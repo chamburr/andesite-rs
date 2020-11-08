@@ -589,16 +589,16 @@ pub mod incoming {
         pub system_load: f64,
     }
 
-    /// CPU information about a node and its host.
+    /// Frame statistics.
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct StatsFrames {
-        /// The number of CPU cores.
-        pub sent: u64,
-        /// The load of the Lavalink server.
-        pub nulled: u64,
-        /// The load of the system as a whole.
-        pub deficit: u64,
+        /// Frames sent per minute.
+        pub sent: i64,
+        /// Frames nulled per minute.
+        pub nulled: i64,
+        /// Frames deficit per minute.
+        pub deficit: i64,
     }
 
     /// The type of track event that was received.
