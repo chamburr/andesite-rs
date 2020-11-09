@@ -758,7 +758,7 @@ pub use self::{
         TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck, WebsocketClose,
     },
     outgoing::{
-        Destroy, Equalizer, Filters, Karaoke, OutgoingEvent, Play, SlimVoiceServerUpdate, Stop,
-        Timescale, Tremolo, Update, Vibrato, VoiceUpdate,
+        Destroy, Equalizer, Filters, GetPlayer, Karaoke, OutgoingEvent, Play,
+        SlimVoiceServerUpdate, Stop, Timescale, Tremolo, Update, Vibrato, VoiceUpdate,
     },
 };
