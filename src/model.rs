@@ -39,6 +39,8 @@ pub mod outgoing {
     pub enum OutgoingEvent {
         /// A combined voice server and voice state update.
         VoiceUpdate(VoiceUpdate),
+        /// Retrieve a player.
+        GetPlayer(GetPlayer),
         /// Play a track.
         Play(Play),
         /// Stop a player.
@@ -52,6 +54,12 @@ pub mod outgoing {
     impl From<VoiceUpdate> for OutgoingEvent {
         fn from(event: VoiceUpdate) -> OutgoingEvent {
             Self::VoiceUpdate(event)
+        }
+    }
+
+    impl From<GetPlayer> for OutgoingEvent {
+        fn from(event: GetPlayer) -> OutgoingEvent {
+            Self::GetPlayer(event)
         }
     }
 
@@ -125,6 +133,26 @@ pub mod outgoing {
             Self {
                 endpoint: update.endpoint,
                 token: update.token,
+            }
+        }
+    }
+
+    /// Retrieve a player.
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct GetPlayer {
+        /// The opcode of the event.
+        pub op: String,
+        /// The guild ID of the player.
+        pub guild_id: GuildId,
+    }
+
+    impl GetPlayer {
+        /// Create a new voice update event.
+        pub fn new(guild_id: GuildId) -> Self {
+            Self {
+                op: "get-player".to_owned(),
+                guild_id,
             }
         }
     }
