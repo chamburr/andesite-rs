@@ -442,7 +442,7 @@ pub mod outgoing {
         /// The volume of the player from 0 to 1000. 100 is the default.
         pub volume: Option<i64>,
         /// The filters of the player.
-        pub filter: Option<Filters>,
+        pub filters: Option<Filters>,
     }
 
     impl Update {
@@ -452,7 +452,7 @@ pub mod outgoing {
             pause: impl Into<Option<bool>>,
             position: impl Into<Option<i64>>,
             volume: impl Into<Option<i64>>,
-            filter: impl Into<Option<Filters>>,
+            filters: impl Into<Option<Filters>>,
         ) -> Self {
             Self {
                 op: Opcode::Update,
@@ -460,7 +460,7 @@ pub mod outgoing {
                 pause: pause.into(),
                 position: position.into(),
                 volume: volume.into(),
-                filter: filter.into(),
+                filters: filters.into(),
             }
         }
     }
