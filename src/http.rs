@@ -66,7 +66,7 @@ pub struct TrackInfo {
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistInfo {
     /// The name of the playlist, if available.
-    pub name: String,
+    pub name: Option<String>,
     /// The selected track, if one was selected.
     pub selected_track: Option<u64>,
 }
