@@ -12,19 +12,20 @@ futures-util = { default-features = false, features = ["bilock", "std", "unstabl
 http = { default-features = false, optional = true, version = "0.2" }
 tracing = { default-features = false, features = ["std", "attributes"], version = "0.1" }
 percent-encoding = { default-features = false, optional = true, version = "2" }
+regex = { default-features = false, version = "1.4", features = ["std"] }
 reqwest = { default-features = false, version = "0.10" }
 serde = { default-features = false, features = ["derive", "std"], version = "1" }
 serde_json = { default-features = false, version = "1" }
 serde_with = { default-features = false, features = ["macros"], version = "1.5" }
 tokio = { default-features = false, features = ["net", "rt-core", "time"], version = "0.2" }
-twilight-model = { default-features = false, version = "0.2.0" }
+twilight-model = { default-features = false, version = "0.2" }
 
 [dev-dependencies]
 serde_test = { default-features = false, version = "1" }
 static_assertions = { default-features = false, version = "1" }
 tokio = { default-features = false, features = ["macros", "rt-core"], version = "0.2" }
-twilight-gateway = { version = "0.2.0" }
-twilight-http = { version = "0.2.0" }
+twilight-gateway = { version = "0.2" }
+twilight-http = { version = "0.2" }
 
 [features]
 default = ["http-support", "rustls"]
