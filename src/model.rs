@@ -417,7 +417,7 @@ pub mod outgoing {
     }
 
     impl Equalizer {
-        /// Create a new equalizer filter
+        /// Create a new equalizer filter.
         pub fn new(bands: Vec<f64>) -> Self {
             Self {
                 bands,
