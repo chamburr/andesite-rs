@@ -410,7 +410,7 @@ pub mod outgoing {
     #[serde(rename_all = "camelCase")]
     pub struct Equalizer {
         /// The bands to use as part of the equalizer.
-        pub bands: Vec<f64>,
+        pub bands: Vec<EqualizerBand>,
         /// Whether is enabled, always false.
         #[serde(skip)]
         pub enabled: bool,
@@ -418,12 +418,22 @@ pub mod outgoing {
 
     impl Equalizer {
         /// Create a new equalizer filter.
-        pub fn new(bands: Vec<f64>) -> Self {
+        pub fn new(bands: Vec<EqualizerBand>) -> Self {
             Self {
                 bands,
                 enabled: false,
             }
         }
+    }
+
+    /// A band of the equalizer.
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct EqualizerBand {
+        /// The band.
+        pub band: i64,
+        /// The gain.
+        pub gain: f64,
     }
 
     /// Update a player.

@@ -37,8 +37,7 @@ use futures_util::{
 use http::{
     header::{ToStrError, CONNECTION, UPGRADE},
     Error as HttpError, Request, Response, StatusCode,
-};
-use regex::{Captures, Regex};
+};s
 use reqwest::{Client, Error as ReqwestError};
 use serde_json::Error as JsonError;
 use std::{
@@ -449,27 +448,12 @@ impl Connection {
                         outgoing
                     );
 
-                    let mut payload = serde_json::to_string(&outgoing).map_err(|source| {
+                    let payload = serde_json::to_string(&outgoing).map_err(|source| {
                         NodeError::SerializingMessage {
                             message: outgoing,
                             source,
                         }
                     })?;
-
-                    let re = Regex::new(r#""bands":\[([\d.,]+)]"#).unwrap();
-                    payload = re
-                        .replace(payload.as_str(), |captures: &Captures<'_>| {
-                            let bands = &captures[1]
-                                .split(",")
-                                .enumerate()
-                                .map(|(index, gain)| {
-                                    format!(r#"{{"band":{},"gain":{}}}"#, index, gain)
-                                })
-                                .collect::<Vec<String>>()
-                                .join(",");
-                            return format!(r#""bands":[{}]"#, bands);
-                        })
-                        .to_string();
 
                     let msg = Message::Text(payload);
                     self.connection.send(msg).await.unwrap();
