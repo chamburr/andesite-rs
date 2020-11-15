@@ -37,7 +37,7 @@ use futures_util::{
 use http::{
     header::{ToStrError, CONNECTION, UPGRADE},
     Error as HttpError, Request, Response, StatusCode,
-};s
+};
 use reqwest::{Client, Error as ReqwestError};
 use serde_json::Error as JsonError;
 use std::{
