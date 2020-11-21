@@ -11,3 +11,7 @@ For support, please message CHamburr#2591 on Discord.
 andesite: https://github.com/natanbc/andesite
 
 twilight-lavalink: https://github.com/twilight-rs/twilight/tree/trunk/lavalink
+
+## License
+
+This project is licensed under [ISC](https://github.com/chamburr/twilight-andesite/blob/master/LICENSE).
