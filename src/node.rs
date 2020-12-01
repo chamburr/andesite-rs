@@ -35,7 +35,7 @@ use futures_util::{
     stream::StreamExt,
 };
 use http::{
-    header::{ToStrError, CONNECTION, UPGRADE},
+    header::{ToStrError, AUTHORIZATION, CONNECTION, UPGRADE},
     Error as HttpError, Request, Response, StatusCode,
 };
 use reqwest::{Client, Error as ReqwestError};
@@ -257,6 +257,7 @@ impl Node {
             let mut req = http::Request::get(format!("http://{}", config.address));
             req = req.header(CONNECTION, "Upgrade");
             req = req.header(UPGRADE, "WebSocket");
+            req = req.header(AUTHORIZATION, config.authorization.clone());
             req = req.header("User-Id", config.user_id.to_string());
 
             let req = req
