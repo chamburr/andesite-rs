@@ -25,6 +25,12 @@ pub enum LoadType {
     TrackLoaded,
 }
 
+impl Default for LoadType {
+    fn default() -> Self {
+        Self::LoadFailed
+    }
+}
+
 /// A track within a search result.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,6 +82,7 @@ pub struct PlaylistInfo {
 #[serde(rename_all = "camelCase")]
 pub struct LoadedTracks {
     /// The type of search result, such as a list of tracks or a playlist.
+    #[serde(default)]
     pub load_type: LoadType,
     /// The list of tracks returned for the search query.
     pub tracks: Option<Vec<Track>>,
