@@ -8,7 +8,6 @@ use http::{
 };
 use percent_encoding::NON_ALPHANUMERIC;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use twilight_model::id::GuildId;
 
 /// The type of search result given.
