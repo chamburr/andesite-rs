@@ -1,6 +1,7 @@
 //! Models to deserialize responses into and functions to create `http` crate
 //! requests.
 
+use crate::node::NodeConfig;
 use http::{
     header::{HeaderValue, AUTHORIZATION},
     Error as HttpError, Request,
@@ -8,6 +9,7 @@ use http::{
 use percent_encoding::NON_ALPHANUMERIC;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use twilight_model::id::GuildId;
 
 /// The type of search result given.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -120,17 +122,19 @@ pub struct Error {
 ///
 /// [`LoadedTracks`]: struct.LoadedTracks.html
 pub fn load_track(
-    address: SocketAddr,
-    authorization: impl AsRef<str>,
+    config: NodeConfig,
     identifier: impl AsRef<str>,
 ) -> Result<Request<&'static [u8]>, HttpError> {
     let identifier =
         percent_encoding::percent_encode(identifier.as_ref().as_bytes(), NON_ALPHANUMERIC);
-    let url = format!("http://{}/loadtracks?identifier={}", address, identifier);
+    let url = format!(
+        "http://{}/loadtracks?identifier={}",
+        config.address, identifier
+    );
 
     let mut req = Request::get(url);
 
-    let auth_value = HeaderValue::from_str(authorization.as_ref())?;
+    let auth_value = HeaderValue::from_str(config.authorization.as_ref())?;
     req = req.header(AUTHORIZATION, auth_value);
 
     req.body(b"")
@@ -138,16 +142,32 @@ pub fn load_track(
 
 /// Decode a track based on the base64 encoded track string.
 pub fn decode_track(
-    address: SocketAddr,
-    authorization: impl AsRef<str>,
+    config: NodeConfig,
     track: impl AsRef<str>,
 ) -> Result<Request<&'static [u8]>, HttpError> {
-    let url = format!("http://{}/decodetrack?track={}", address, track.as_ref());
+    let url = format!(
+        "http://{}/decodetrack?track={}",
+        config.address,
+        track.as_ref()
+    );
 
     let mut req = Request::get(url);
 
-    let auth_value = HeaderValue::from_str(authorization.as_ref())?;
+    let auth_value = HeaderValue::from_str(config.authorization.as_ref())?;
     req = req.header(AUTHORIZATION, auth_value);
+
+    req.body(b"")
+}
+
+/// Retrieve a player based on guild ID.
+pub fn get_player(config: NodeConfig, guild: GuildId) -> Result<Request<&'static [u8]>, HttpError> {
+    let url = format!("http://{}/player/{}", config.address, guild);
+
+    let mut req = Request::get(url);
+
+    let auth_value = HeaderValue::from_str(config.authorization.as_ref())?;
+    req = req.header(AUTHORIZATION, auth_value);
+    req = req.header("User-Id", config.user_id.to_string());
 
     req.body(b"")
 }
