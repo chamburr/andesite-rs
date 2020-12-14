@@ -120,6 +120,7 @@
     unused,
     warnings
 )]
+#![allow(clippy::large_enum_variant)]
 
 pub mod client;
 pub mod model;

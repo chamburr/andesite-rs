@@ -521,8 +521,10 @@ pub mod incoming {
         TrackException(TrackException),
         /// A track got stuck.
         TrackStuck(TrackStuck),
-        /// The websocket got closed.
+        /// A websocket got closed.
         WebsocketClose(WebsocketClose),
+        /// A player got destroyed.
+        PlayerDestroy(PlayerDestroy),
     }
 
     impl From<PlayerUpdate> for IncomingEvent {
@@ -654,9 +656,12 @@ pub mod incoming {
         /// A track for a player got stuck.
         #[serde(rename = "TrackStuckEvent")]
         Stuck,
-        /// The websocket got closed.
+        /// A websocket got closed.
         #[serde(rename = "WebSocketClosedEvent")]
         WebsocketClose,
+        /// A player got destroyed.
+        #[serde(rename = "PlayerDestroyedEvent")]
+        PlayerDestroy,
     }
 
     /// A track started.
@@ -739,7 +744,7 @@ pub mod incoming {
         pub threshold_ms: i64,
     }
 
-    /// The websocket got closed.
+    /// A websocket got closed.
     #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct WebsocketClose {
@@ -760,12 +765,31 @@ pub mod incoming {
         /// Whether it is closed by remote.
         pub by_remote: bool,
     }
+
+    /// A player got destroyed.
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct PlayerDestroy {
+        /// The opcode of the event.
+        pub op: Opcode,
+        /// The type of track event.
+        #[serde(rename = "type")]
+        pub kind: TrackEventType,
+        /// The guild ID of the player.
+        pub guild_id: GuildId,
+        /// The user ID affected, always None.
+        #[serde(skip)]
+        pub user_id: Option<()>,
+        /// Whether player is destroyed during cleanup.
+        pub cleanup: bool,
+    }
 }
 
 pub use self::{
     incoming::{
-        IncomingEvent, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu, StatsFrames, StatsMemory,
-        TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck, WebsocketClose,
+        IncomingEvent, PlayerDestroy, PlayerUpdate, PlayerUpdateState, Stats, StatsCpu,
+        StatsFrames, StatsMemory, TrackEnd, TrackEventType, TrackException, TrackStart, TrackStuck,
+        WebsocketClose,
     },
     outgoing::{
         Destroy, Equalizer, Filters, GetPlayer, Karaoke, OutgoingEvent, Play,

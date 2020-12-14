@@ -368,14 +368,13 @@ impl Node {
     ) -> Result<(), NodeError> {
         if let Some(destroyed) = update.state.destroyed {
             if destroyed {
-                players.remove(&update.guild_id);
                 return Ok(());
             }
         }
 
         let mut player = match players.get_mut(&update.guild_id) {
             Some(player) => player,
-            None => players.get_or_insert(update.guild_id.clone(), self.clone()),
+            None => players.get_or_insert(update.guild_id, self.clone()),
         };
 
         *player.value_mut().time_mut() = update.state.time;
@@ -512,9 +511,14 @@ impl Connection {
 
         match event {
             IncomingEvent::PlayerUpdate(ref update) => {
-                self.player_update(update, node.clone()).await?
+                self.player_update(update, node.clone()).await?;
             }
-            IncomingEvent::Stats(ref stats) => self.stats(stats).await?,
+            IncomingEvent::PlayerDestroy(ref destroy) => {
+                self.players.remove(&destroy.guild_id);
+            }
+            IncomingEvent::Stats(ref stats) => {
+                self.stats(stats).await?;
+            }
             _ => {}
         }
 
