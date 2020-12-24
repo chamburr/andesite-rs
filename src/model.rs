@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 pub enum Opcode {
     /// A combined voice server and voice state update.
     VoiceUpdate,
+    /// Retrieve a player.
+    #[serde(rename = "get-player")]
+    GetPlayer,
     /// Play a track.
     Play,
     /// Stop a player.
@@ -49,6 +52,32 @@ pub mod outgoing {
         Update(Update),
         /// Destroy a player for a guild.
         Destroy(Destroy),
+    }
+
+    impl OutgoingEvent {
+        /// Get the event opcode.
+        pub fn op(&self) -> Opcode {
+            match self {
+                OutgoingEvent::VoiceUpdate(data) => data.op,
+                OutgoingEvent::GetPlayer(data) => data.op,
+                OutgoingEvent::Play(data) => data.op,
+                OutgoingEvent::Stop(data) => data.op,
+                OutgoingEvent::Update(data) => data.op,
+                OutgoingEvent::Destroy(data) => data.op,
+            }
+        }
+
+        /// Get the event guild id.
+        pub fn guild_id(&self) -> GuildId {
+            match self {
+                OutgoingEvent::VoiceUpdate(data) => data.guild_id,
+                OutgoingEvent::GetPlayer(data) => data.guild_id,
+                OutgoingEvent::Play(data) => data.guild_id,
+                OutgoingEvent::Stop(data) => data.guild_id,
+                OutgoingEvent::Update(data) => data.guild_id,
+                OutgoingEvent::Destroy(data) => data.guild_id,
+            }
+        }
     }
 
     impl From<VoiceUpdate> for OutgoingEvent {
@@ -142,7 +171,7 @@ pub mod outgoing {
     #[serde(rename_all = "camelCase")]
     pub struct GetPlayer {
         /// The opcode of the event.
-        pub op: String,
+        pub op: Opcode,
         /// The guild ID of the player.
         pub guild_id: GuildId,
     }
@@ -151,7 +180,7 @@ pub mod outgoing {
         /// Create a new voice update event.
         pub fn new(guild_id: GuildId) -> Self {
             Self {
-                op: "get-player".to_owned(),
+                op: Opcode::GetPlayer,
                 guild_id,
             }
         }
@@ -525,6 +554,36 @@ pub mod incoming {
         WebsocketClose(WebsocketClose),
         /// A player got destroyed.
         PlayerDestroy(PlayerDestroy),
+    }
+
+    impl IncomingEvent {
+        /// Get the event opcode.
+        pub fn op(&self) -> Opcode {
+            match self {
+                IncomingEvent::PlayerUpdate(data) => data.op,
+                IncomingEvent::Stats(data) => data.op,
+                IncomingEvent::TrackEnd(data) => data.op,
+                IncomingEvent::TrackStart(data) => data.op,
+                IncomingEvent::TrackException(data) => data.op,
+                IncomingEvent::TrackStuck(data) => data.op,
+                IncomingEvent::WebsocketClose(data) => data.op,
+                IncomingEvent::PlayerDestroy(data) => data.op,
+            }
+        }
+
+        /// Get the event guild id.
+        pub fn guild_id(&self) -> GuildId {
+            match self {
+                IncomingEvent::PlayerUpdate(data) => data.guild_id,
+                IncomingEvent::Stats(_) => GuildId::default(),
+                IncomingEvent::TrackEnd(data) => data.guild_id,
+                IncomingEvent::TrackStart(data) => data.guild_id,
+                IncomingEvent::TrackException(data) => data.guild_id,
+                IncomingEvent::TrackStuck(data) => data.guild_id,
+                IncomingEvent::WebsocketClose(data) => data.guild_id,
+                IncomingEvent::PlayerDestroy(data) => data.guild_id,
+            }
+        }
     }
 
     impl From<PlayerUpdate> for IncomingEvent {
