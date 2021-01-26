@@ -49,7 +49,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tokio::time as tokio_time;
+use tokio::time::sleep;
 use twilight_model::id::UserId;
 
 /// An error occurred while either initializing a connection or while running
@@ -587,7 +587,7 @@ async fn backoff(
             Err(source) => {
                 tracing::warn!("failed to connect to node {}: {:?}", source, config.address);
 
-                if matches!(source, TungsteniteError::Http(status) if status == StatusCode::UNAUTHORIZED)
+                if matches!(source, TungsteniteError::Http(ref res) if res.status() == StatusCode::UNAUTHORIZED)
                 {
                     return Err(NodeError::Unauthorized {
                         address: config.address,
@@ -606,7 +606,7 @@ async fn backoff(
                     seconds,
                     config.address,
                 );
-                tokio_time::delay_for(Duration::from_secs(seconds)).await;
+                sleep(Duration::from_secs(seconds)).await;
 
                 seconds *= 2;
 

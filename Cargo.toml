@@ -5,26 +5,26 @@ authors = ["CHamburr <hi@chamburr.xyz>"]
 edition = "2018"
 
 [dependencies]
-async-tungstenite = { default-features = false, features = ["tokio-runtime"], version = "0.9.3" }
-dashmap = { default-features = false, version = "3" }
+async-tungstenite = { default-features = false, features = ["tokio-runtime"], version = "0.12" }
+dashmap = { default-features = false, version = "4.0" }
 futures-channel = { default-features = false, features = ["std"], version = "0.3" }
 futures-util = { default-features = false, features = ["bilock", "std", "unstable"], version = "0.3" }
 http = { default-features = false, optional = true, version = "0.2" }
 tracing = { default-features = false, features = ["std", "attributes"], version = "0.1" }
-percent-encoding = { default-features = false, optional = true, version = "2" }
-reqwest = { default-features = false, version = "0.10" }
-serde = { default-features = false, features = ["derive", "std"], version = "1" }
-serde_json = { default-features = false, version = "1" }
+percent-encoding = { default-features = false, optional = true, version = "2.0" }
+reqwest = { default-features = false, version = "0.11" }
+serde = { default-features = false, features = ["derive", "std"], version = "1.0" }
+serde_json = { default-features = false, version = "1.0" }
 serde_with = { default-features = false, features = ["macros"], version = "1.5" }
-tokio = { default-features = false, features = ["net", "rt-core", "time"], version = "0.2" }
-twilight-model = { default-features = false, version = "0.2" }
+tokio = { default-features = false, features = ["net", "rt-multi-thread", "time"], version = "1.0" }
+twilight-model = { default-features = false, version = "0.3" }
 
 [dev-dependencies]
-serde_test = { default-features = false, version = "1" }
-static_assertions = { default-features = false, version = "1" }
-tokio = { default-features = false, features = ["macros", "rt-core"], version = "0.2" }
-twilight-gateway = { version = "0.2" }
-twilight-http = { version = "0.2" }
+serde_test = { default-features = false, version = "1.0" }
+static_assertions = { default-features = false, version = "1.0" }
+tokio = { default-features = false, features = ["macros"], version = "1.0" }
+twilight-gateway = { version = "0.3" }
+twilight-http = { version = "0.3" }
 
 [features]
 default = ["http-support", "rustls"]
