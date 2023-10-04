@@ -14,4 +14,4 @@ twilight-lavalink: https://github.com/twilight-rs/twilight/tree/trunk/lavalink
 
 ## License
 
-This project is licensed under [ISC](https://github.com/chamburr/twilight-andesite/blob/master/LICENSE).
+This project is licensed under [ISC License](LICENSE).
